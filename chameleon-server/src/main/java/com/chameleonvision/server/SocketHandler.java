@@ -15,9 +15,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.javalin.websocket.*;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
@@ -32,9 +34,11 @@ public class SocketHandler {
     @SuppressWarnings("FieldCanBeLocal")
     private final UIOutboundSubscriber uiOutboundSubscriber = new UIOutboundSubscriber();
 
-    public static class UIMap extends HashMap<String, Object> {}
+    public static class UIMap extends HashMap<String, Object> {
+    }
 
-    private abstract static class SelectiveBroadcastPair extends Pair<UIMap, WsContext> {}
+    private abstract static class SelectiveBroadcastPair extends Pair<UIMap, WsContext> {
+    }
 
     @SuppressWarnings("rawtypes")
     private class UIOutboundSubscriber extends DataChangeSubscriber {
@@ -49,24 +53,22 @@ public class SocketHandler {
                 var thisEvent = (OutgoingUIEvent) event;
                 try {
                     switch (thisEvent.updateType) {
-                        case BROADCAST:
-                            {
-                                if (event.data instanceof HashMap) {
-                                    var data = (UIMap) event.data;
-                                    broadcastMessage(data, null);
-                                } else {
-                                    broadcastMessage(event.data, null);
-                                }
-                                break;
+                        case BROADCAST: {
+                            if (event.data instanceof HashMap) {
+                                var data = (UIMap) event.data;
+                                broadcastMessage(data, null);
+                            } else {
+                                broadcastMessage(event.data, null);
                             }
-                        case SINGLEUSER:
-                            {
-                                if (event.data instanceof Pair) {
-                                    var pair = (SelectiveBroadcastPair) event.data;
-                                    broadcastMessage(pair.getLeft(), pair.getRight());
-                                }
-                                break;
+                            break;
+                        }
+                        case SINGLEUSER: {
+                            if (event.data instanceof Pair) {
+                                var pair = (SelectiveBroadcastPair) event.data;
+                                broadcastMessage(pair.getLeft(), pair.getRight());
                             }
+                            break;
+                        }
                     }
                 } catch (JsonProcessingException e) {
                     // TODO: Log
@@ -90,17 +92,20 @@ public class SocketHandler {
 
     public void onConnect(WsConnectContext context) {
         users.add(context);
+        logger.info(String.format("new connection from %s", context.session.getRemoteAddress().toString().replace("/", "")));
     }
 
     protected void onClose(WsCloseContext context) {
         users.remove(context);
+        logger.info(String.format("connection from %s disconnected", context.session.getRemoteAddress().toString().replace("/", "")));
     }
 
     @SuppressWarnings({"unchecked"})
     public void onBinaryMessage(WsBinaryMessageContext context) {
         try {
             Map<String, Object> deserializedData =
-                    objectMapper.readValue(context.data(), new TypeReference<>() {});
+                    objectMapper.readValue(context.data(), new TypeReference<>() {
+                    });
 
             for (Map.Entry<String, Object> entry : deserializedData.entrySet()) {
                 try {
@@ -114,134 +119,121 @@ public class SocketHandler {
                     }
 
                     switch (socketMessageType) {
-                        case SMT_DRIVERMODE:
-                            {
-                                var data = (HashMap<String, Object>) entryValue;
-                                var dmExpEvent =
-                                        new IncomingWebSocketEvent<Integer>(
-                                                DataChangeDestination.DCD_ACTIVEMODULE, "driverExposure", data);
-                                var dmBrightEvent =
-                                        new IncomingWebSocketEvent<Integer>(
-                                                DataChangeDestination.DCD_ACTIVEMODULE, "driverBrightness", data);
-                                var dmIsDriverEvent =
-                                        new IncomingWebSocketEvent<Boolean>(
-                                                DataChangeDestination.DCD_ACTIVEMODULE, "isDriver", data);
+                        case SMT_DRIVERMODE: {
+                            var data = (HashMap<String, Object>) entryValue;
+                            var dmExpEvent =
+                                    new IncomingWebSocketEvent<Integer>(
+                                            DataChangeDestination.DCD_ACTIVEMODULE, "driverExposure", data);
+                            var dmBrightEvent =
+                                    new IncomingWebSocketEvent<Integer>(
+                                            DataChangeDestination.DCD_ACTIVEMODULE, "driverBrightness", data);
+                            var dmIsDriverEvent =
+                                    new IncomingWebSocketEvent<Boolean>(
+                                            DataChangeDestination.DCD_ACTIVEMODULE, "isDriver", data);
 
-                                dcService.publishEvents(dmExpEvent, dmBrightEvent, dmIsDriverEvent);
-                                break;
-                            }
-                        case SMT_CHANGECAMERANAME:
-                            {
-                                var ccnEvent =
-                                        new IncomingWebSocketEvent<>(
-                                                DataChangeDestination.DCD_ACTIVEMODULE,
-                                                "cameraNickname",
-                                                (String) entryValue);
-                                dcService.publishEvent(ccnEvent);
-                                break;
-                            }
-                        case SMT_CHANGEPIPELINENAME:
-                            {
-                                var cpnEvent =
-                                        new IncomingWebSocketEvent<>(
-                                                DataChangeDestination.DCD_ACTIVEMODULE,
-                                                "pipelineName",
-                                                (String) entryValue);
-                                dcService.publishEvent(cpnEvent);
-                                break;
-                            }
-                        case SMT_ADDNEWPIPELINE:
-                            {
-                                HashMap<String, Object> data = (HashMap<String, Object>) entryValue;
-                                var type = (PipelineType) data.get("pipelineType");
-                                var name = (String) data.get("pipelineName");
+                            dcService.publishEvents(dmExpEvent, dmBrightEvent, dmIsDriverEvent);
+                            break;
+                        }
+                        case SMT_CHANGECAMERANAME: {
+                            var ccnEvent =
+                                    new IncomingWebSocketEvent<>(
+                                            DataChangeDestination.DCD_ACTIVEMODULE,
+                                            "cameraNickname",
+                                            (String) entryValue);
+                            dcService.publishEvent(ccnEvent);
+                            break;
+                        }
+                        case SMT_CHANGEPIPELINENAME: {
+                            var cpnEvent =
+                                    new IncomingWebSocketEvent<>(
+                                            DataChangeDestination.DCD_ACTIVEMODULE,
+                                            "pipelineName",
+                                            (String) entryValue);
+                            dcService.publishEvent(cpnEvent);
+                            break;
+                        }
+                        case SMT_ADDNEWPIPELINE: {
+                            HashMap<String, Object> data = (HashMap<String, Object>) entryValue;
+                            var type = (PipelineType) data.get("pipelineType");
+                            var name = (String) data.get("pipelineName");
 
-                                var newPipelineEvent =
-                                        new IncomingWebSocketEvent<>(
-                                                DataChangeDestination.DCD_ACTIVEMODULE,
-                                                "newPipelineInfo",
-                                                Pair.of(name, type));
-                                dcService.publishEvent(newPipelineEvent);
-                                break;
-                            }
-                        case SMT_COMMAND:
-                            {
-                                var cmd = SocketMessageCommandType.valueOf((String) entryValue);
-                                switch (cmd) {
-                                    case SMCT_DELETECURRENTPIPELINE:
-                                        {
-                                            var deleteCurrentPipelineEvent =
-                                                    new IncomingWebSocketEvent<>(
-                                                            DataChangeDestination.DCD_ACTIVEMODULE, "deleteCurrPipeline", 0);
-                                            dcService.publishEvent(deleteCurrentPipelineEvent);
-                                            break;
-                                        }
-                                    case SMCT_SAVE:
-                                        {
-                                            var saveEvent =
-                                                    new IncomingWebSocketEvent<>(DataChangeDestination.DCD_OTHER, "save", 0);
-                                            dcService.publishEvent(saveEvent);
-                                            break;
-                                        }
+                            var newPipelineEvent =
+                                    new IncomingWebSocketEvent<>(
+                                            DataChangeDestination.DCD_ACTIVEMODULE,
+                                            "newPipelineInfo",
+                                            Pair.of(name, type));
+                            dcService.publishEvent(newPipelineEvent);
+                            break;
+                        }
+                        case SMT_COMMAND: {
+                            var cmd = SocketMessageCommandType.valueOf((String) entryValue);
+                            switch (cmd) {
+                                case SMCT_DELETECURRENTPIPELINE: {
+                                    var deleteCurrentPipelineEvent =
+                                            new IncomingWebSocketEvent<>(
+                                                    DataChangeDestination.DCD_ACTIVEMODULE, "deleteCurrPipeline", 0);
+                                    dcService.publishEvent(deleteCurrentPipelineEvent);
+                                    break;
                                 }
-                                break;
+                                case SMCT_SAVE: {
+                                    var saveEvent =
+                                            new IncomingWebSocketEvent<>(DataChangeDestination.DCD_OTHER, "save", 0);
+                                    dcService.publishEvent(saveEvent);
+                                    break;
+                                }
                             }
-                        case SMT_CURRENTCAMERA:
-                            {
-                                var changeCurrentCameraEvent =
-                                        new IncomingWebSocketEvent<>(
-                                                DataChangeDestination.DCD_OTHER, "changeUICamera", (Integer) entryValue);
-                                dcService.publishEvent(changeCurrentCameraEvent);
-                                break;
-                            }
-                        case SMT_CURRENTPIPELINE:
-                            {
-                                var changePipelineEvent =
-                                        new IncomingWebSocketEvent<>(
-                                                DataChangeDestination.DCD_ACTIVEMODULE,
-                                                "changePipeline",
-                                                (Integer) entryValue);
-                                dcService.publishEvent(changePipelineEvent);
-                                break;
-                            }
-                        case SMT_ISPNPCALIBRATION:
-                            {
-                                var changePipelineEvent =
-                                        new IncomingWebSocketEvent<>(
-                                                DataChangeDestination.DCD_ACTIVEMODULE,
-                                                "changePipeline",
-                                                PipelineManager.CAL_3D_INDEX);
-                                dcService.publishEvent(changePipelineEvent);
-                                break;
-                            }
-                        case SMT_TAKECALIBRATIONSNAPSHOT:
-                            {
-                                var takeCalSnapshotEvent =
-                                        new IncomingWebSocketEvent<>(
-                                                DataChangeDestination.DCD_ACTIVEMODULE, "takeCalSnapshot", 0);
-                                dcService.publishEvent(takeCalSnapshotEvent);
-                                break;
-                            }
-                        case SMT_PIPELINESETTINGCHANGE:
-                            {
-                                HashMap<String, Object> data = (HashMap<String, Object>) entryValue;
+                            break;
+                        }
+                        case SMT_CURRENTCAMERA: {
+                            var changeCurrentCameraEvent =
+                                    new IncomingWebSocketEvent<>(
+                                            DataChangeDestination.DCD_OTHER, "changeUICamera", (Integer) entryValue);
+                            dcService.publishEvent(changeCurrentCameraEvent);
+                            break;
+                        }
+                        case SMT_CURRENTPIPELINE: {
+                            var changePipelineEvent =
+                                    new IncomingWebSocketEvent<>(
+                                            DataChangeDestination.DCD_ACTIVEMODULE,
+                                            "changePipeline",
+                                            (Integer) entryValue);
+                            dcService.publishEvent(changePipelineEvent);
+                            break;
+                        }
+                        case SMT_ISPNPCALIBRATION: {
+                            var changePipelineEvent =
+                                    new IncomingWebSocketEvent<>(
+                                            DataChangeDestination.DCD_ACTIVEMODULE,
+                                            "changePipeline",
+                                            PipelineManager.CAL_3D_INDEX);
+                            dcService.publishEvent(changePipelineEvent);
+                            break;
+                        }
+                        case SMT_TAKECALIBRATIONSNAPSHOT: {
+                            var takeCalSnapshotEvent =
+                                    new IncomingWebSocketEvent<>(
+                                            DataChangeDestination.DCD_ACTIVEMODULE, "takeCalSnapshot", 0);
+                            dcService.publishEvent(takeCalSnapshotEvent);
+                            break;
+                        }
+                        case SMT_PIPELINESETTINGCHANGE: {
+                            HashMap<String, Object> data = (HashMap<String, Object>) entryValue;
 
-                                // there shall only be one.
-                                Map.Entry<String, Object> thisEntry = data.entrySet().iterator().next();
+                            // there shall only be one.
+                            Map.Entry<String, Object> thisEntry = data.entrySet().iterator().next();
 
-                                var pipelineSettingChangeEvent =
-                                        new IncomingWebSocketEvent<>(
-                                                DataChangeDestination.DCD_ACTIVEPIPELINESETTINGS,
-                                                thisEntry.getKey(),
-                                                thisEntry.getValue());
+                            var pipelineSettingChangeEvent =
+                                    new IncomingWebSocketEvent<>(
+                                            DataChangeDestination.DCD_ACTIVEPIPELINESETTINGS,
+                                            thisEntry.getKey(),
+                                            thisEntry.getValue());
 
-                                dcService.publishEvent(pipelineSettingChangeEvent);
-                            }
-                        default:
-                            {
-                                logger.warn("Unknown Socket Message - Name: " + entryKey);
-                                break;
-                            }
+                            dcService.publishEvent(pipelineSettingChangeEvent);
+                        }
+                        default: {
+                            logger.warn("Unknown Socket Message - Name: " + entryKey);
+                            break;
+                        }
                     }
                 } catch (Exception ex) {
                     // ignored

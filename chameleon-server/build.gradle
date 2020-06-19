@@ -28,7 +28,7 @@ ext {
 
 dependencies {
     implementation "io.javalin:javalin:3.7.0"
-
+    compile "org.slf4j:slf4j-nop:1.7.28"
     implementation "com.fasterxml.jackson.core:jackson-annotations:2.10.0"
     implementation "com.fasterxml.jackson.core:jackson-core:2.10.0"
     implementation "com.fasterxml.jackson.core:jackson-databind:2.10.0"
